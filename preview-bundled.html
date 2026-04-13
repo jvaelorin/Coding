@@ -1,0 +1,2075 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memorial Wall — The Veil (Preview)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500&display=swap">
+<style>
+/* ==========================================================================
+   Memorial Wall — The Veil
+   VaelorinVerse
+   ========================================================================== */
+
+:root {
+    --mw-void-top: #0a0a0a;
+    --mw-void-bottom: #0d1117;
+    --mw-thread: #D4A337;
+    --mw-thread-bright: #FFD700;
+    --mw-name: #F5E6D3;
+    --mw-map-bg: #1a1a1a;
+    --mw-map-border: #3d3522;
+    --mw-map-border-bright: #7a6a3f;
+    --mw-loved: #D4A337;
+    --mw-child: #E8E8E8;
+    --mw-companion: #C9A227;
+    --mw-service: #1E3A5F;
+    --mw-service-edge: #D4A337;
+    --mw-font-display: "Cinzel", "Cormorant Garamond", Georgia, serif;
+    --mw-font-name: "Cormorant Garamond", Georgia, serif;
+    --mw-font-ui: "Inter", system-ui, sans-serif;
+    --mw-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* --------------------------------------------------------------------------
+   Layout — take over the viewport, hide page chrome overflow.
+   -------------------------------------------------------------------------- */
+
+.memorial-wall {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% 20%, #0d1117 0%, var(--mw-void-top) 60%, #050507 100%);
+    color: var(--mw-name);
+    font-family: var(--mw-font-ui);
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Entry veil fade */
+.mw-entry-veil {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 2s ease-out;
+}
+.memorial-wall.is-ready .mw-entry-veil {
+    opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   The Veil (upper 60-70%) — canvas region for floating names
+   -------------------------------------------------------------------------- */
+
+.mw-veil {
+    position: relative;
+    width: 100%;
+    height: 65vh;
+    min-height: 420px;
+}
+
+.mw-veil__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: default;
+}
+
+/* Faded section titles painted in the sky — canvas handles positioning */
+.mw-veil__section-labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.mw-veil__label {
+    position: absolute;
+    font-family: var(--mw-font-display);
+    font-weight: 400;
+    font-size: clamp(14px, 1.6vw, 22px);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(212, 163, 55, 0.18);
+    transition: color 0.8s var(--mw-ease), opacity 0.8s var(--mw-ease);
+    white-space: nowrap;
+}
+
+.mw-veil__label--children   { top: 8%;  left: 50%; transform: translateX(-50%); color: rgba(232, 232, 232, 0.18); }
+.mw-veil__label--loved      { top: 42%; left: 22%; transform: translate(-50%, -50%); color: rgba(212, 163, 55, 0.18); }
+.mw-veil__label--companions { top: 42%; right: 22%; transform: translate(50%, -50%); color: rgba(201, 162, 39, 0.18); }
+.mw-veil__label--service    { bottom: 8%; left: 50%; transform: translateX(-50%); color: rgba(30, 58, 95, 0.35); }
+
+.memorial-wall[data-section="loved_one"]      .mw-veil__label:not(.mw-veil__label--loved),
+.memorial-wall[data-section="child"]          .mw-veil__label:not(.mw-veil__label--children),
+.memorial-wall[data-section="companion"]      .mw-veil__label:not(.mw-veil__label--companions),
+.memorial-wall[data-section="service_member"] .mw-veil__label:not(.mw-veil__label--service) {
+    opacity: 0.2;
+}
+
+/* --------------------------------------------------------------------------
+   The Map (lower 30-40%)
+   -------------------------------------------------------------------------- */
+
+.mw-map {
+    position: relative;
+    width: 100%;
+    height: 35vh;
+    min-height: 260px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.45) 30%, #050507 100%);
+}
+
+.mw-map__svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+}
+
+.mw-state {
+    fill: var(--mw-map-bg);
+    stroke: var(--mw-map-border);
+    stroke-width: 0.6;
+    transition: fill 0.3s var(--mw-ease), stroke 0.3s var(--mw-ease);
+    cursor: pointer;
+}
+
+.mw-state:hover,
+.mw-state.is-hovered,
+.mw-state.is-selected {
+    fill: #1f1a10;
+    stroke: var(--mw-map-border-bright);
+    stroke-width: 0.9;
+}
+
+.mw-state-anchor {
+    fill: var(--mw-thread);
+    opacity: 0;
+    transition: opacity 0.4s var(--mw-ease);
+    pointer-events: none;
+}
+
+.mw-state-anchor.is-active {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+}
+
+/* --------------------------------------------------------------------------
+   Tooltips
+   -------------------------------------------------------------------------- */
+
+.mw-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(10, 10, 10, 0.92);
+    border: 1px solid rgba(212, 163, 55, 0.35);
+    border-radius: 4px;
+    padding: 12px 16px;
+    max-width: 280px;
+    font-family: var(--mw-font-ui);
+    font-size: 13px;
+    color: var(--mw-name);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s var(--mw-ease), transform 0.2s var(--mw-ease);
+    z-index: 40;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 163, 55, 0.12);
+}
+
+.mw-tooltip.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mw-tooltip__name {
+    font-family: var(--mw-font-name);
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 4px;
+    color: var(--mw-name);
+}
+
+.mw-tooltip__meta {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mw-thread);
+    margin: 0 0 6px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.mw-tooltip__dot { opacity: 0.5; }
+
+.mw-tooltip__tribute {
+    font-family: var(--mw-font-name);
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.4;
+    color: rgba(245, 230, 211, 0.85);
+    margin: 0;
+}
+
+.mw-tooltip__tribute:empty { display: none; }
+
+/* --------------------------------------------------------------------------
+   Section filter controls
+   -------------------------------------------------------------------------- */
+
+.mw-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    z-index: 30;
+    max-width: calc(100% - 40px);
+}
+
+.mw-chip {
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(212, 163, 55, 0.3);
+    color: rgba(245, 230, 211, 0.75);
+    padding: 8px 16px;
+    font-family: var(--mw-font-ui);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.3s var(--mw-ease);
+    backdrop-filter: blur(6px);
+}
+
+.mw-chip:hover,
+.mw-chip:focus-visible {
+    border-color: var(--mw-thread);
+    color: var(--mw-name);
+    outline: none;
+    box-shadow: 0 0 14px rgba(212, 163, 55, 0.25);
+}
+
+.mw-chip.is-active {
+    background: rgba(212, 163, 55, 0.15);
+    border-color: var(--mw-thread);
+    color: var(--mw-name);
+    box-shadow: 0 0 18px rgba(212, 163, 55, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   Ambient sound toggle
+   -------------------------------------------------------------------------- */
+
+.mw-sound-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(212, 163, 55, 0.3);
+    color: rgba(245, 230, 211, 0.75);
+    padding: 8px 14px;
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: all 0.3s var(--mw-ease);
+    z-index: 30;
+}
+
+.mw-sound-toggle:hover,
+.mw-sound-toggle:focus-visible {
+    border-color: var(--mw-thread);
+    color: var(--mw-name);
+    outline: none;
+}
+
+.mw-sound-toggle__icon {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(212, 163, 55, 0.4);
+    transition: background 0.3s var(--mw-ease), box-shadow 0.3s var(--mw-ease);
+}
+
+.mw-sound-toggle[aria-pressed="true"] .mw-sound-toggle__icon {
+    background: var(--mw-thread-bright);
+    box-shadow: 0 0 10px var(--mw-thread-bright);
+}
+
+/* --------------------------------------------------------------------------
+   CTA — Remember a Name
+   -------------------------------------------------------------------------- */
+
+.mw-cta {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: inline-block;
+    padding: 14px 28px;
+    border: 1px solid var(--mw-thread);
+    background: rgba(10, 10, 10, 0.5);
+    color: var(--mw-thread);
+    font-family: var(--mw-font-display);
+    font-size: 13px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 2px;
+    backdrop-filter: blur(6px);
+    transition: all 0.4s var(--mw-ease);
+    z-index: 30;
+    animation: mw-cta-idle 4s ease-in-out infinite;
+}
+
+@keyframes mw-cta-idle {
+    0%, 100% { box-shadow: 0 0 0 rgba(212, 163, 55, 0); }
+    50%      { box-shadow: 0 0 22px rgba(212, 163, 55, 0.35); }
+}
+
+.mw-cta:hover,
+.mw-cta:focus-visible {
+    background: rgba(212, 163, 55, 0.18);
+    color: var(--mw-name);
+    box-shadow: 0 0 30px rgba(212, 163, 55, 0.6);
+    outline: none;
+    animation-play-state: paused;
+}
+
+/* --------------------------------------------------------------------------
+   Quote overlay
+   -------------------------------------------------------------------------- */
+
+.mw-quote {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 5;
+    max-width: min(640px, 80vw);
+    text-align: center;
+    opacity: 0;
+}
+
+.mw-quote__text {
+    font-family: var(--mw-font-name);
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(16px, 2.2vw, 24px);
+    color: rgba(245, 230, 211, 0.55);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    margin: 0;
+    text-shadow: 0 0 24px rgba(212, 163, 55, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   Modal (full tribute)
+   -------------------------------------------------------------------------- */
+
+.mw-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.mw-modal[hidden] { display: none; }
+
+.mw-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    animation: mw-fade-in 0.3s var(--mw-ease);
+}
+
+.mw-modal__card {
+    position: relative;
+    max-width: 520px;
+    width: 100%;
+    padding: 40px 40px 36px;
+    background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
+    border: 1px solid rgba(212, 163, 55, 0.4);
+    border-radius: 4px;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8), 0 0 60px rgba(212, 163, 55, 0.15);
+    animation: mw-slide-up 0.4s var(--mw-ease);
+    outline: none;
+}
+
+.mw-modal__close {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    color: rgba(245, 230, 211, 0.6);
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 10px;
+    transition: color 0.2s var(--mw-ease);
+}
+.mw-modal__close:hover { color: var(--mw-thread-bright); }
+
+.mw-modal__category {
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--mw-thread);
+    margin: 0 0 12px;
+}
+
+.mw-modal__name {
+    font-family: var(--mw-font-name);
+    font-weight: 500;
+    font-size: clamp(24px, 3vw, 32px);
+    color: var(--mw-name);
+    margin: 0 0 8px;
+    letter-spacing: 0.01em;
+}
+
+.mw-modal__state {
+    font-family: var(--mw-font-ui);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245, 230, 211, 0.55);
+    margin: 0 0 24px;
+}
+
+.mw-modal__tribute {
+    font-family: var(--mw-font-name);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.6;
+    color: rgba(245, 230, 211, 0.9);
+    margin: 0 0 20px;
+    padding-left: 16px;
+    border-left: 2px solid rgba(212, 163, 55, 0.4);
+}
+.mw-modal__tribute:empty { display: none; }
+
+.mw-modal__submitted {
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    color: rgba(245, 230, 211, 0.4);
+    margin: 0;
+}
+
+@keyframes mw-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes mw-slide-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   List fallback — only visible to screen readers by default, or revealed
+   when prefers-reduced-motion is active with reduced-motion styling.
+   -------------------------------------------------------------------------- */
+
+.mw-list-fallback {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.mw-list-fallback__title {
+    font-family: var(--mw-font-display);
+    font-size: 24px;
+}
+
+.mw-list-section {
+    margin: 24px 0;
+}
+
+.mw-list-section__title {
+    font-family: var(--mw-font-display);
+    font-size: 18px;
+    color: var(--mw-thread);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+}
+
+.mw-list-section__names {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mw-list-section__names li {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(212, 163, 55, 0.12);
+    font-family: var(--mw-font-name);
+    font-size: 16px;
+    color: var(--mw-name);
+}
+
+.mw-list-section__names li .mw-list-state {
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245, 230, 211, 0.5);
+    margin-left: 8px;
+}
+
+.mw-list-section__names li .mw-list-tribute {
+    display: block;
+    font-style: italic;
+    font-size: 14px;
+    color: rgba(245, 230, 211, 0.7);
+    margin-top: 2px;
+}
+
+.mw-noscript {
+    padding: 24px;
+    color: var(--mw-name);
+    text-align: center;
+    font-family: var(--mw-font-ui);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1199px) {
+    .mw-veil  { height: 70vh; }
+    .mw-map   { height: 30vh; min-height: 220px; }
+}
+
+@media (max-width: 767px) {
+    .mw-veil { height: 72vh; }
+    .mw-map  { height: 28vh; min-height: 180px; }
+
+    .mw-controls {
+        top: auto;
+        right: 0;
+        bottom: 88px;
+        left: 0;
+        padding: 0 16px;
+        max-width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .mw-controls::-webkit-scrollbar { display: none; }
+
+    .mw-chip {
+        flex-shrink: 0;
+        padding: 7px 14px;
+        font-size: 11px;
+    }
+
+    .mw-cta {
+        bottom: 16px;
+        right: 16px;
+        padding: 12px 20px;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+    }
+
+    .mw-sound-toggle {
+        top: 12px;
+        left: 12px;
+        padding: 6px 10px;
+        font-size: 10px;
+    }
+
+    .mw-veil__label { font-size: 11px; letter-spacing: 0.25em; }
+
+    .mw-modal__card { padding: 32px 24px 28px; }
+}
+
+/* High-contrast mode */
+@media (prefers-contrast: more) {
+    :root {
+        --mw-name: #ffffff;
+        --mw-thread: #ffd24d;
+        --mw-thread-bright: #fff08a;
+        --mw-map-border: #7a6a3f;
+    }
+    .mw-chip { border-color: var(--mw-thread); color: var(--mw-name); }
+}
+
+/* Reduced motion — disable drift & particles, reveal list fallback */
+@media (prefers-reduced-motion: reduce) {
+    .mw-entry-veil { transition: opacity 0.01ms; }
+    .mw-cta { animation: none; }
+    .mw-tooltip { transition: opacity 0.01ms; }
+}
+
+.mw-reduced-motion .mw-list-fallback {
+    position: relative;
+    left: auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    max-width: 900px;
+    margin: 24px auto;
+    padding: 0 24px 64px;
+}
+/* Preview-only reset */
+html, body { margin: 0; padding: 0; height: 100%; background: #050507; overflow: hidden; font-family: "Inter", system-ui, sans-serif; }
+.preview-banner { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,10,10,.7); border: 1px solid rgba(212,163,55,.25); color: rgba(245,230,211,.55); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; padding: 6px 14px; border-radius: 999px; backdrop-filter: blur(6px); z-index: 25; pointer-events: none; }
+@media (max-width: 767px) { .preview-banner { bottom: 64px; } }
+</style>
+</head>
+<body>
+<main id="memorial-wall" class="memorial-wall" role="main" aria-label="Memorial Wall — The Veil">
+    <div class="mw-entry-veil" aria-hidden="true"></div>
+    <div class="mw-quote" aria-live="polite"><p class="mw-quote__text" data-quote-target></p></div>
+    <section class="mw-veil" aria-label="The Veil — names of the remembered">
+        <canvas id="mw-veil-canvas" class="mw-veil__canvas"></canvas>
+        <div class="mw-veil__section-labels" aria-hidden="true">
+            <span class="mw-veil__label mw-veil__label--children">Children</span>
+            <span class="mw-veil__label mw-veil__label--loved">Loved Ones</span>
+            <span class="mw-veil__label mw-veil__label--companions">Companions</span>
+            <span class="mw-veil__label mw-veil__label--service">Service Members</span>
+        </div>
+    </section>
+    <section class="mw-map" aria-label="Map of the United States — origins of the remembered">
+        <svg id="mw-map-svg" class="mw-map__svg" role="img" aria-label="U.S. state map"><title>Map of U.S. states showing remembered origins</title></svg>
+        <div id="mw-map-tooltip" class="mw-tooltip mw-tooltip--state" role="tooltip" aria-hidden="true"></div>
+    </section>
+    <nav class="mw-controls" aria-label="Memorial section filters">
+        <button type="button" class="mw-chip is-active" data-section="all">All</button>
+        <button type="button" class="mw-chip" data-section="loved_one">Loved Ones</button>
+        <button type="button" class="mw-chip" data-section="child">Children</button>
+        <button type="button" class="mw-chip" data-section="companion">Companions</button>
+        <button type="button" class="mw-chip" data-section="service_member">Service Members</button>
+    </nav>
+    <button type="button" class="mw-sound-toggle" aria-pressed="false" aria-label="Toggle ambient sound">
+        <span class="mw-sound-toggle__icon" aria-hidden="true"></span>
+        <span class="mw-sound-toggle__text">Ambient</span>
+    </button>
+    <a class="mw-cta" href="#remember-a-name"><span class="mw-cta__text">Remember a Name</span></a>
+    <div id="mw-name-tooltip" class="mw-tooltip mw-tooltip--name" role="tooltip" aria-hidden="true">
+        <p class="mw-tooltip__name" data-name></p>
+        <p class="mw-tooltip__meta"><span data-category></span><span class="mw-tooltip__dot" aria-hidden="true">·</span><span data-state></span></p>
+        <p class="mw-tooltip__tribute" data-tribute></p>
+    </div>
+    <div id="mw-modal" class="mw-modal" role="dialog" aria-modal="true" aria-labelledby="mw-modal-name" hidden>
+        <div class="mw-modal__backdrop" data-close-modal></div>
+        <article class="mw-modal__card" tabindex="-1">
+            <button type="button" class="mw-modal__close" data-close-modal aria-label="Close">×</button>
+            <p class="mw-modal__category" data-category></p>
+            <h2 class="mw-modal__name" id="mw-modal-name" data-name></h2>
+            <p class="mw-modal__state" data-state></p>
+            <p class="mw-modal__tribute" data-tribute></p>
+            <p class="mw-modal__submitted" data-submitted></p>
+        </article>
+    </div>
+    <div id="mw-list-fallback" class="mw-list-fallback" aria-label="List of remembered names">
+        <h2 class="mw-list-fallback__title">The Veil — List View</h2>
+        <div class="mw-list-fallback__sections" data-list-target></div>
+    </div>
+</main>
+<div class="preview-banner">Preview · sample data · WordPress + Firebase not required</div>
+<script>
+window.VaelorinVeilConfig = { firebase: {}, usMapUrl: 'https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/states-10m.json', rememberUrl: '#remember-a-name' };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script>
+/* Memorial Wall — Firebase data loader
+ * ------------------------------------------------------------------
+ * Establishes the global VaelorinVeil namespace and exposes a fetch()
+ * function that returns the memorial list. Uses the Firebase Realtime
+ * Database REST endpoint (no SDK required). If no Firebase config is
+ * available, falls back to a small bundled sample set so the Veil
+ * always renders something.
+ */
+(function () {
+    'use strict';
+
+    window.VaelorinVeil = window.VaelorinVeil || {};
+
+    var CATEGORIES = ['loved_one', 'child', 'companion', 'service_member'];
+
+    // Sample fallback data — used when Firebase isn't configured yet.
+    // Real names would come from Firebase. Kept deliberately small and
+    // representative across all four sections and several states.
+    var FALLBACK = [
+        { name: 'Eleanor Mae Whitfield', category: 'loved_one',      state: 'IN', tribute: 'Her garden still blooms.' },
+        { name: 'Thomas Reyes',          category: 'loved_one',      state: 'CA', tribute: 'The stories he told us live on.' },
+        { name: 'Margaret O\u2019Connell', category: 'loved_one',    state: 'MA', tribute: '' },
+        { name: 'David Hollings',        category: 'loved_one',      state: 'TX', tribute: 'Steady as the oak he planted.' },
+        { name: 'Ruth Anderssen',        category: 'loved_one',      state: 'MN', tribute: '' },
+        { name: 'Joseph Calabrese',      category: 'loved_one',      state: 'NY', tribute: 'Sunday dinners forever.' },
+        { name: 'Iris Beaumont',         category: 'loved_one',      state: 'LA', tribute: '' },
+        { name: 'Walter Kimura',         category: 'loved_one',      state: 'WA', tribute: '' },
+
+        { name: 'Sophie Grace',          category: 'child',          state: 'OH', tribute: 'Our little light.' },
+        { name: 'Micah James',           category: 'child',          state: 'IN', tribute: 'Forever four, forever loved.' },
+        { name: 'Ava Rose',              category: 'child',          state: 'FL', tribute: '' },
+        { name: 'Oliver',                category: 'child',          state: 'CO', tribute: 'Born still, held always.' },
+
+        { name: 'Duke',                  category: 'companion',      state: 'TX', tribute: 'Best boy.' },
+        { name: 'Luna',                  category: 'companion',      state: 'OR', tribute: 'She hunted moonlight.' },
+        { name: 'Pepper',                category: 'companion',      state: 'IL', tribute: '' },
+        { name: 'Maple',                 category: 'companion',      state: 'VT', tribute: 'Fifteen good years.' },
+        { name: 'Biscuit',               category: 'companion',      state: 'GA', tribute: '' },
+
+        { name: 'SSG Marcus Hale',       category: 'service_member', state: 'KY', tribute: 'Army — still on post.' },
+        { name: 'Lt. Cdr. Alice Park',   category: 'service_member', state: 'VA', tribute: 'Navy.' },
+        { name: 'Sgt. Rafael Ortiz',     category: 'service_member', state: 'AZ', tribute: 'Marines — semper fi.' },
+        { name: 'TSgt. Diana Voss',      category: 'service_member', state: 'NE', tribute: 'Air Force.' }
+    ];
+
+    function normalize(record, idx) {
+        return {
+            id:            record.id || ('fallback-' + idx),
+            name:          String(record.name || '').trim(),
+            category:      CATEGORIES.indexOf(record.category) >= 0 ? record.category : 'loved_one',
+            state:         String(record.state || '').toUpperCase().slice(0, 2),
+            tribute:       String(record.tribute || '').trim(),
+            submittedBy:   record.submittedBy || 'Anonymous',
+            dateSubmitted: record.dateSubmitted || ''
+        };
+    }
+
+    function buildFirebaseUrl(config) {
+        // Support either { databaseURL } or { projectId } shapes.
+        if (config.databaseURL) {
+            return config.databaseURL.replace(/\/$/, '') + '/memorials.json?orderBy="approved"&equalTo=true';
+        }
+        if (config.projectId) {
+            return 'https://' + config.projectId + '-default-rtdb.firebaseio.com/memorials.json';
+        }
+        return null;
+    }
+
+    function fetchFromFirebase(config) {
+        var url = buildFirebaseUrl(config);
+        if (!url) return Promise.reject(new Error('No Firebase URL'));
+
+        return fetch(url, { mode: 'cors' })
+            .then(function (res) {
+                if (!res.ok) throw new Error('Firebase responded ' + res.status);
+                return res.json();
+            })
+            .then(function (data) {
+                if (!data) return [];
+                // Firebase returns an object keyed by id. Convert to array.
+                return Object.keys(data)
+                    .map(function (id) { return Object.assign({ id: id }, data[id]); })
+                    .filter(function (r) { return r && r.name && r.approved !== false; });
+            });
+    }
+
+    function fetchMemorials() {
+        var cfg = (window.VaelorinVeilConfig && window.VaelorinVeilConfig.firebase) || {};
+        var hasConfig = cfg && (cfg.databaseURL || cfg.projectId);
+
+        var promise = hasConfig
+            ? fetchFromFirebase(cfg).catch(function (err) {
+                console.warn('[Veil] Firebase fetch failed, using fallback data:', err);
+                return FALLBACK.slice();
+            })
+            : Promise.resolve(FALLBACK.slice());
+
+        return promise.then(function (raw) {
+            return raw.map(normalize).filter(function (r) { return r.name && r.state; });
+        });
+    }
+
+    window.VaelorinVeil.fetchMemorials = fetchMemorials;
+    window.VaelorinVeil.CATEGORIES = CATEGORIES;
+    window.VaelorinVeil.CATEGORY_LABELS = {
+        loved_one:      'Loved One',
+        child:          'Child',
+        companion:      'Companion',
+        service_member: 'Service Member'
+    };
+})();
+</script>
+<script>
+/* Memorial Wall — Ambient particle system
+ * ------------------------------------------------------------------
+ * Two layers:
+ *   1. "Dust"   — slow drifting gold particles throughout the Veil sky.
+ *   2. "Embers" — slower, brighter particles that rise from the map
+ *                 toward the names — the visual bridge between earth
+ *                 and Veil.
+ * Rendered onto the same Veil canvas each frame (see veil-scene.js).
+ */
+(function () {
+    'use strict';
+
+    var V = window.VaelorinVeil = window.VaelorinVeil || {};
+
+    function rand(min, max) { return min + Math.random() * (max - min); }
+
+    function createParticleSystem(opts) {
+        opts = opts || {};
+        var dustCount   = opts.dustCount   || 80;
+        var emberCount  = opts.emberCount  || 12;
+        var particles   = [];
+
+        function spawnDust(w, h) {
+            return {
+                type: 'dust',
+                x: Math.random() * w,
+                y: Math.random() * h,
+                r: rand(0.4, 1.2),
+                vx: rand(-0.08, 0.08),
+                vy: rand(-0.04, 0.04),
+                alpha: rand(0.15, 0.45),
+                alphaPhase: Math.random() * Math.PI * 2,
+                alphaSpeed: rand(0.004, 0.012)
+            };
+        }
+
+        function spawnEmber(w, h) {
+            return {
+                type: 'ember',
+                x: Math.random() * w,
+                y: h + rand(0, 80),         // start just below the canvas
+                r: rand(0.8, 1.6),
+                vx: rand(-0.15, 0.15),
+                vy: rand(-0.6, -0.25),      // rising
+                alpha: 0,
+                maxAlpha: rand(0.4, 0.8),
+                life: 0,
+                ttl: rand(280, 540)
+            };
+        }
+
+        function init(w, h) {
+            particles.length = 0;
+            for (var i = 0; i < dustCount;  i++) particles.push(spawnDust(w, h));
+            for (var j = 0; j < emberCount; j++) {
+                var e = spawnEmber(w, h);
+                e.y = rand(h * 0.2, h);      // pre-seed spread so we don't wait
+                e.life = rand(0, e.ttl * 0.7);
+                particles.push(e);
+            }
+        }
+
+        function resize(w, h) {
+            // Preserve particles but clamp positions so resize feels continuous.
+            for (var i = 0; i < particles.length; i++) {
+                var p = particles[i];
+                if (p.x > w) p.x = Math.random() * w;
+                if (p.y > h + 100) p.y = Math.random() * h;
+            }
+            // Top up if dimensions grew significantly.
+            var targetDust  = Math.min(dustCount,  Math.round(w * h / 9000));
+            while (particles.filter(function (p) { return p.type === 'dust'; }).length < targetDust) {
+                particles.push(spawnDust(w, h));
+            }
+        }
+
+        function update(w, h) {
+            for (var i = 0; i < particles.length; i++) {
+                var p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.type === 'dust') {
+                    p.alphaPhase += p.alphaSpeed;
+                    // Wrap around edges.
+                    if (p.x < -4)     p.x = w + 4;
+                    if (p.x > w + 4)  p.x = -4;
+                    if (p.y < -4)     p.y = h + 4;
+                    if (p.y > h + 4)  p.y = -4;
+                } else {
+                    // ember — fade in, drift up, fade out, respawn
+                    p.life++;
+                    var t = p.life / p.ttl;
+                    if (t < 0.3)       p.alpha = (t / 0.3) * p.maxAlpha;
+                    else if (t > 0.7)  p.alpha = ((1 - t) / 0.3) * p.maxAlpha;
+                    else               p.alpha = p.maxAlpha;
+
+                    if (p.life >= p.ttl || p.y < -20) {
+                        particles[i] = spawnEmber(w, h);
+                    }
+                }
+            }
+        }
+
+        function render(ctx, w, h) {
+            for (var i = 0; i < particles.length; i++) {
+                var p = particles[i];
+                var alpha = p.type === 'dust'
+                    ? p.alpha * (0.65 + 0.35 * Math.sin(p.alphaPhase))
+                    : p.alpha;
+                if (alpha <= 0.01) continue;
+
+                ctx.save();
+                if (p.type === 'ember') {
+                    // Soft glow for embers
+                    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 6);
+                    g.addColorStop(0,    'rgba(255, 215, 0, ' + alpha + ')');
+                    g.addColorStop(0.4,  'rgba(212, 163, 55, ' + (alpha * 0.4) + ')');
+                    g.addColorStop(1,    'rgba(212, 163, 55, 0)');
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r * 6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(255, 230, 160, ' + alpha + ')';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = 'rgba(212, 163, 55, ' + alpha + ')';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        return {
+            init:   init,
+            resize: resize,
+            update: update,
+            render: render
+        };
+    }
+
+    V.createParticleSystem = createParticleSystem;
+})();
+</script>
+<script>
+/* Memorial Wall — Thread lines
+ * ------------------------------------------------------------------
+ * Renders luminous bezier curves from each name in the Veil down to
+ * the anchor point of its origin state on the map. A soft pulse of
+ * light travels down each thread to evoke the "living thread" motif.
+ *
+ * The state anchor points come from the US map module; this module is
+ * purely a renderer called from the main raf loop.
+ */
+(function () {
+    'use strict';
+
+    var V = window.VaelorinVeil = window.VaelorinVeil || {};
+
+    function drawThread(ctx, name, anchor, opts, now) {
+        // name:   { x, y, section, hovered, dimmed }
+        // anchor: { x, y } — in canvas coords, same coordinate system as names
+        if (!anchor) return;
+
+        var x1 = name.x,          y1 = name.y;
+        var x2 = anchor.x,        y2 = anchor.y;
+
+        // Bezier curve — gentle S-shape
+        var midY = (y1 + y2) / 2;
+        var cp1x = x1 + (x2 - x1) * 0.15;
+        var cp1y = midY - 30;
+        var cp2x = x1 + (x2 - x1) * 0.85;
+        var cp2y = midY + 30;
+
+        var baseAlpha = name.hovered ? 0.9
+                     : name.stateHovered ? 0.75
+                     : name.dimmed ? 0.04
+                     : 0.18;
+
+        var lineWidth = name.hovered ? 1.4 : 0.6;
+
+        // Shadow / bloom
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.shadowColor = 'rgba(255, 215, 0, ' + (baseAlpha * 0.8) + ')';
+        ctx.shadowBlur  = name.hovered ? 14 : 6;
+        ctx.strokeStyle = 'rgba(212, 163, 55, ' + baseAlpha + ')';
+        ctx.lineWidth   = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2, y2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Pulse — a bright dot traveling down the thread.
+        // Each thread has a slightly different phase so they don't march in sync.
+        if (!name.dimmed) {
+            var period = 5200; // ms per pulse cycle
+            var t = ((now + (name.pulseOffset || 0)) % period) / period;
+            if (t > 0.02 && t < 0.98) {
+                var pt = cubicBezierPoint(t, x1, y1, cp1x, cp1y, cp2x, cp2y, x2, y2);
+                var pulseAlpha = name.hovered ? 1 : 0.7;
+                var pulseR = name.hovered ? 2.4 : 1.6;
+
+                ctx.save();
+                var g = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pulseR * 4);
+                g.addColorStop(0,   'rgba(255, 230, 150, ' + pulseAlpha + ')');
+                g.addColorStop(0.5, 'rgba(212, 163, 55, ' + (pulseAlpha * 0.4) + ')');
+                g.addColorStop(1,   'rgba(212, 163, 55, 0)');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pulseR * 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(255, 240, 200, ' + pulseAlpha + ')';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pulseR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+    }
+
+    function cubicBezierPoint(t, x0, y0, x1, y1, x2, y2, x3, y3) {
+        var mt = 1 - t;
+        var mt2 = mt * mt;
+        var t2 = t * t;
+        return {
+            x: mt2 * mt * x0 + 3 * mt2 * t * x1 + 3 * mt * t2 * x2 + t2 * t * x3,
+            y: mt2 * mt * y0 + 3 * mt2 * t * y1 + 3 * mt * t2 * y2 + t2 * t * y3
+        };
+    }
+
+    V.threadLines = {
+        draw: drawThread
+    };
+})();
+</script>
+<script>
+/* Memorial Wall — US Map module
+ * ------------------------------------------------------------------
+ * Renders a stylized US state map using D3 + topojson, exposes per-state
+ * centroid coordinates (in *page* coordinates, so the Veil canvas can
+ * draw thread lines into the map region), and dispatches state events.
+ *
+ * The map lives in its own SVG below the Veil. Anchor centroids are
+ * recomputed on resize.
+ */
+(function () {
+    'use strict';
+
+    var V = window.VaelorinVeil = window.VaelorinVeil || {};
+
+    function createUSMap(opts) {
+        var svgEl     = opts.svg;            // <svg> element
+        var dataUrl   = opts.dataUrl;        // states-10m.json
+        var onHover   = opts.onHover  || function () {};
+        var onSelect  = opts.onSelect || function () {};
+
+        var svg       = d3.select(svgEl);
+        var width     = 0;
+        var height    = 0;
+        var projection;
+        var pathGen;
+        var statesLayer;
+        var anchorsLayer;
+        var statesData;             // GeoJSON feature collection
+        var anchorByAbbr  = {};     // { 'IN': { x, y, count, name } }
+        var counts        = {};     // { 'IN': 12 }
+        var selectedAbbr  = null;
+        var hoveredAbbr   = null;
+
+        // Mapping from FIPS state IDs → USPS abbreviations.
+        var FIPS_TO_ABBR = {
+            '01':'AL','02':'AK','04':'AZ','05':'AR','06':'CA','08':'CO','09':'CT',
+            '10':'DE','11':'DC','12':'FL','13':'GA','15':'HI','16':'ID','17':'IL',
+            '18':'IN','19':'IA','20':'KS','21':'KY','22':'LA','23':'ME','24':'MD',
+            '25':'MA','26':'MI','27':'MN','28':'MS','29':'MO','30':'MT','31':'NE',
+            '32':'NV','33':'NH','34':'NJ','35':'NM','36':'NY','37':'NC','38':'ND',
+            '39':'OH','40':'OK','41':'OR','42':'PA','44':'RI','45':'SC','46':'SD',
+            '47':'TN','48':'TX','49':'UT','50':'VT','51':'VA','53':'WA','54':'WV',
+            '55':'WI','56':'WY','72':'PR'
+        };
+        var ABBR_TO_NAME = {
+            AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
+            CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',
+            FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',
+            IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',
+            ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',
+            MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',
+            NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',
+            NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',
+            OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
+            SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',
+            VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',
+            PR:'Puerto Rico'
+        };
+
+        function load() {
+            return fetch(dataUrl)
+                .then(function (r) {
+                    if (!r.ok) throw new Error('Map fetch ' + r.status);
+                    return r.json();
+                })
+                .then(function (us) {
+                    statesData = topojson.feature(us, us.objects.states);
+                    return statesData;
+                });
+        }
+
+        function init() {
+            svg.selectAll('*').remove();
+            statesLayer  = svg.append('g').attr('class', 'mw-states-layer');
+            anchorsLayer = svg.append('g').attr('class', 'mw-anchors-layer');
+        }
+
+        function resize() {
+            var rect = svgEl.getBoundingClientRect();
+            width  = rect.width;
+            height = rect.height;
+            if (!statesData || width === 0 || height === 0) return;
+
+            svg.attr('viewBox', '0 0 ' + width + ' ' + height);
+            projection = d3.geoAlbersUsa().fitSize([width, height * 0.95], statesData);
+            pathGen    = d3.geoPath(projection);
+
+            var paths = statesLayer.selectAll('path').data(statesData.features, function (d) { return d.id; });
+
+            paths.enter()
+                .append('path')
+                .attr('class', 'mw-state')
+                .attr('data-abbr', function (d) { return FIPS_TO_ABBR[d.id] || ''; })
+                .on('mouseenter', function (event, d) {
+                    var abbr = FIPS_TO_ABBR[d.id];
+                    hoveredAbbr = abbr;
+                    d3.select(this).classed('is-hovered', true);
+                    onHover(abbr, ABBR_TO_NAME[abbr], counts[abbr] || 0, event);
+                })
+                .on('mousemove', function (event, d) {
+                    var abbr = FIPS_TO_ABBR[d.id];
+                    onHover(abbr, ABBR_TO_NAME[abbr], counts[abbr] || 0, event, true);
+                })
+                .on('mouseleave', function (event, d) {
+                    hoveredAbbr = null;
+                    d3.select(this).classed('is-hovered', false);
+                    onHover(null);
+                })
+                .on('click', function (event, d) {
+                    var abbr = FIPS_TO_ABBR[d.id];
+                    selectedAbbr = (selectedAbbr === abbr) ? null : abbr;
+                    statesLayer.selectAll('path').classed('is-selected', function (f) {
+                        return FIPS_TO_ABBR[f.id] === selectedAbbr;
+                    });
+                    onSelect(selectedAbbr);
+                })
+                .merge(paths)
+                .attr('d', pathGen);
+
+            // Compute centroids for each state in *page* coordinates so the
+            // Veil canvas can draw threads to the right place.
+            recomputeAnchors();
+            renderAnchors();
+        }
+
+        function recomputeAnchors() {
+            if (!projection || !statesData) return;
+            var svgRect = svgEl.getBoundingClientRect();
+            anchorByAbbr = {};
+            statesData.features.forEach(function (f) {
+                var abbr = FIPS_TO_ABBR[f.id];
+                if (!abbr) return;
+                var c = pathGen.centroid(f);
+                if (!c || isNaN(c[0])) return;
+                anchorByAbbr[abbr] = {
+                    abbr:  abbr,
+                    name:  ABBR_TO_NAME[abbr],
+                    // SVG-local coords:
+                    sx: c[0],
+                    sy: c[1],
+                    // Page coords (used by the Veil canvas):
+                    px: svgRect.left + c[0],
+                    py: svgRect.top  + c[1],
+                    count: counts[abbr] || 0
+                };
+            });
+        }
+
+        function renderAnchors() {
+            var data = Object.keys(anchorByAbbr)
+                .map(function (k) { return anchorByAbbr[k]; })
+                .filter(function (a) { return a.count > 0; });
+
+            var sel = anchorsLayer.selectAll('circle.mw-state-anchor').data(data, function (d) { return d.abbr; });
+
+            sel.enter()
+                .append('circle')
+                .attr('class', 'mw-state-anchor is-active')
+                .attr('r', function (d) { return Math.min(2 + Math.sqrt(d.count) * 1.2, 6); })
+                .merge(sel)
+                .attr('cx', function (d) { return d.sx; })
+                .attr('cy', function (d) { return d.sy; })
+                .attr('r',  function (d) { return Math.min(2 + Math.sqrt(d.count) * 1.2, 6); });
+
+            sel.exit().remove();
+        }
+
+        function setCounts(c) {
+            counts = c || {};
+            // Update count on already-computed anchors and re-render anchor dots.
+            Object.keys(anchorByAbbr).forEach(function (k) {
+                anchorByAbbr[k].count = counts[k] || 0;
+            });
+            renderAnchors();
+        }
+
+        function getAnchor(abbr) {
+            return anchorByAbbr[abbr] || null;
+        }
+
+        function getAllAnchors() {
+            return anchorByAbbr;
+        }
+
+        function getStateName(abbr) {
+            return ABBR_TO_NAME[abbr] || abbr;
+        }
+
+        function selectState(abbr) {
+            selectedAbbr = abbr || null;
+            statesLayer.selectAll('path').classed('is-selected', function (f) {
+                return FIPS_TO_ABBR[f.id] === selectedAbbr;
+            });
+        }
+
+        return {
+            load:           load,
+            init:           init,
+            resize:         resize,
+            recomputeAnchors: recomputeAnchors,
+            setCounts:      setCounts,
+            getAnchor:      getAnchor,
+            getAllAnchors:  getAllAnchors,
+            getStateName:   getStateName,
+            selectState:    selectState,
+            get selected()  { return selectedAbbr; }
+        };
+    }
+
+    V.createUSMap = createUSMap;
+})();
+</script>
+<script>
+/* Memorial Wall — Veil scene
+ * ------------------------------------------------------------------
+ * The Veil is a 2D canvas scene. Each name is a floating label with
+ * gentle drift and a small parallax-derived depth so the sky feels
+ * volumetric without the cost of a full WebGL stack.
+ *
+ * Names are clustered into four sacred sections:
+ *   - children       (upper-center, brighter/whiter "closest to light")
+ *   - loved_one      (center-left,  gold)
+ *   - companion      (center-right, warm amber)
+ *   - service_member (lower-center, deep blue + gold edge — "still on watch")
+ *
+ * The scene exposes:
+ *   setMemorials(list)  — refresh the name set
+ *   setSection(name)    — fade non-matching sections
+ *   setStateFilter(abb) — fade names whose state != abbr (null = all)
+ *   render(ctx, now)    — draw frame
+ *   pickAt(x, y)        — hit-test for tooltips/clicks
+ *   each(fn)            — iterate all rendered names with screen coords
+ *   resize(w, h)        — relayout
+ *   onPointerMove(x,y)  — track hover
+ */
+(function () {
+    'use strict';
+
+    var V = window.VaelorinVeil = window.VaelorinVeil || {};
+
+    var SECTION_COLORS = {
+        loved_one:      { r: 245, g: 230, b: 211, edge: '#D4A337' },
+        child:          { r: 255, g: 255, b: 255, edge: '#E8E8E8' },
+        companion:      { r: 246, g: 224, b: 168, edge: '#C9A227' },
+        service_member: { r: 200, g: 220, b: 255, edge: '#D4A337' }
+    };
+
+    var CATEGORY_LABELS = {
+        loved_one:      'Loved One',
+        child:          'Child',
+        companion:      'Companion',
+        service_member: 'Service Member'
+    };
+
+    function createVeilScene(opts) {
+        var canvas = opts.canvas;
+        var dpr    = Math.min(window.devicePixelRatio || 1, 2);
+        var width  = 0;
+        var height = 0;
+        var names  = [];
+        var section = 'all';
+        var stateFilter = null;
+        var hoveredId = null;
+        var pointer = { x: -1, y: -1 };
+        var reducedMotion = !!opts.reducedMotion;
+
+        function sectionLayoutBox(sectionKey, w, h) {
+            // Returns { cx, cy, rx, ry } — center + radii of the elliptical
+            // region in the sky for this section.
+            switch (sectionKey) {
+                case 'child':
+                    return { cx: w * 0.50, cy: h * 0.18, rx: w * 0.32, ry: h * 0.13 };
+                case 'loved_one':
+                    return { cx: w * 0.28, cy: h * 0.48, rx: w * 0.22, ry: h * 0.22 };
+                case 'companion':
+                    return { cx: w * 0.72, cy: h * 0.48, rx: w * 0.22, ry: h * 0.22 };
+                case 'service_member':
+                    return { cx: w * 0.50, cy: h * 0.82, rx: w * 0.36, ry: h * 0.12 };
+                default:
+                    return { cx: w * 0.50, cy: h * 0.50, rx: w * 0.40, ry: h * 0.30 };
+            }
+        }
+
+        function layoutNames() {
+            // Distribute names into their section's elliptical region using
+            // a deterministic seeded layout so the wall feels "placed,"
+            // not random — and so each name keeps its position across rerenders.
+            var bySection = { loved_one: [], child: [], companion: [], service_member: [] };
+            names.forEach(function (n) { (bySection[n.category] || bySection.loved_one).push(n); });
+
+            Object.keys(bySection).forEach(function (key) {
+                var box = sectionLayoutBox(key, width, height);
+                var arr = bySection[key];
+                var count = arr.length;
+                arr.forEach(function (n, i) {
+                    // Golden-angle spiral within the ellipse for natural spacing.
+                    var t = (i + 0.5) / Math.max(count, 1);
+                    var angle = i * 2.39996; // golden angle
+                    var radius = Math.sqrt(t);
+                    n.baseX = box.cx + Math.cos(angle) * radius * box.rx;
+                    n.baseY = box.cy + Math.sin(angle) * radius * box.ry;
+
+                    // Depth (0 = far, 1 = near) for parallax + size variance.
+                    if (n.depth == null) n.depth = 0.4 + (hash01(n.id || n.name) * 0.6);
+
+                    // Gentle drift parameters
+                    n.driftPhaseX = hash01(n.id + 'x') * Math.PI * 2;
+                    n.driftPhaseY = hash01(n.id + 'y') * Math.PI * 2;
+                    n.driftAmpX   = 6  + hash01(n.id + 'ax') * 14;
+                    n.driftAmpY   = 4  + hash01(n.id + 'ay') * 10;
+                    n.driftSpeed  = 0.00015 + hash01(n.id + 's') * 0.00025;
+
+                    n.pulseOffset = hash01(n.id + 'p') * 5200;
+
+                    n.x = n.baseX;
+                    n.y = n.baseY;
+
+                    // Cached font size based on depth + section
+                    var base = key === 'child' ? 15 : 14;
+                    n.fontSize = Math.round(base + n.depth * 6);
+                });
+            });
+        }
+
+        // Cheap deterministic 0..1 hash for string keys.
+        function hash01(str) {
+            str = String(str || '');
+            var h = 2166136261 >>> 0;
+            for (var i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return ((h >>> 0) % 100000) / 100000;
+        }
+
+        function setMemorials(list) {
+            names = list.map(function (m, i) {
+                return Object.assign({
+                    _idx: i,
+                    width: 0,
+                    height: 0
+                }, m);
+            });
+            layoutNames();
+        }
+
+        function setSection(s) {
+            section = s || 'all';
+        }
+
+        function setStateFilter(abbr) {
+            stateFilter = abbr || null;
+        }
+
+        function setStateHover(abbr) {
+            for (var i = 0; i < names.length; i++) {
+                names[i].stateHovered = !!(abbr && names[i].state === abbr);
+            }
+        }
+
+        function resize(w, h) {
+            width  = w;
+            height = h;
+            // HiDPI backing store
+            canvas.width  = Math.round(w * dpr);
+            canvas.height = Math.round(h * dpr);
+            canvas.style.width  = w + 'px';
+            canvas.style.height = h + 'px';
+            layoutNames();
+        }
+
+        function update(now) {
+            for (var i = 0; i < names.length; i++) {
+                var n = names[i];
+                if (reducedMotion) {
+                    n.x = n.baseX;
+                    n.y = n.baseY;
+                } else {
+                    var t = now * n.driftSpeed;
+                    n.x = n.baseX + Math.cos(t + n.driftPhaseX) * n.driftAmpX;
+                    n.y = n.baseY + Math.sin(t + n.driftPhaseY) * n.driftAmpY;
+                }
+
+                n.dimmed = isDimmed(n);
+                n.hovered = (n.id === hoveredId);
+            }
+        }
+
+        function isDimmed(n) {
+            if (section !== 'all' && n.category !== section) return true;
+            if (stateFilter && n.state !== stateFilter)       return true;
+            return false;
+        }
+
+        function render(ctx, now) {
+            // Caller is responsible for scaling/clearing AND for calling
+            // update() before this if it needs fresh positions. We just
+            // paint the names in CSS pixel units against the current transform.
+
+            // Two passes: dimmed names underneath, active on top.
+            for (var pass = 0; pass < 2; pass++) {
+                for (var i = 0; i < names.length; i++) {
+                    var n = names[i];
+                    var active = !n.dimmed;
+                    if (pass === 0 && active)  continue;
+                    if (pass === 1 && !active) continue;
+                    drawName(ctx, n);
+                }
+            }
+        }
+
+        function drawName(ctx, n) {
+            var color = SECTION_COLORS[n.category] || SECTION_COLORS.loved_one;
+            var depthAlpha = 0.55 + n.depth * 0.45;
+            var alpha = n.dimmed ? 0.18 : (n.hovered ? 1 : depthAlpha);
+
+            ctx.save();
+            ctx.font = '500 ' + n.fontSize + 'px "Cormorant Garamond", Georgia, serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Soft glow halo
+            if (!n.dimmed) {
+                var glowR = n.hovered ? 26 : 14;
+                var halo = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+                halo.addColorStop(0,
+                    'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + (alpha * 0.35) + ')');
+                halo.addColorStop(1,
+                    'rgba(' + color.r + ',' + color.g + ',' + color.b + ',0)');
+                ctx.fillStyle = halo;
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Service member tinted underline
+            if (n.category === 'service_member' && !n.dimmed) {
+                var w = ctx.measureText(n.name).width;
+                ctx.strokeStyle = 'rgba(212, 163, 55, ' + (alpha * 0.7) + ')';
+                ctx.lineWidth = 0.6;
+                ctx.beginPath();
+                ctx.moveTo(n.x - w / 2 - 4, n.y + n.fontSize * 0.62);
+                ctx.lineTo(n.x + w / 2 + 4, n.y + n.fontSize * 0.62);
+                ctx.stroke();
+            }
+
+            // The name itself
+            ctx.shadowColor = 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + (alpha * 0.9) + ')';
+            ctx.shadowBlur  = n.hovered ? 14 : 6;
+            ctx.fillStyle   = 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + alpha + ')';
+            ctx.fillText(n.name, n.x, n.y);
+
+            // Cache measured size for hit testing
+            if (!n._measuredAt || n._measuredFontSize !== n.fontSize) {
+                n.width  = ctx.measureText(n.name).width + 12;
+                n.height = n.fontSize + 8;
+                n._measuredFontSize = n.fontSize;
+                n._measuredAt = true;
+            }
+
+            ctx.restore();
+        }
+
+        function pickAt(x, y) {
+            // Top-down hit testing — iterate in reverse render order.
+            for (var i = names.length - 1; i >= 0; i--) {
+                var n = names[i];
+                if (n.dimmed) continue;
+                if (Math.abs(x - n.x) <= n.width / 2 && Math.abs(y - n.y) <= n.height / 2) {
+                    return n;
+                }
+            }
+            return null;
+        }
+
+        function onPointerMove(x, y) {
+            pointer.x = x;
+            pointer.y = y;
+            var hit = pickAt(x, y);
+            hoveredId = hit ? hit.id : null;
+            return hit;
+        }
+
+        function clearHover() {
+            hoveredId = null;
+            pointer.x = -1;
+            pointer.y = -1;
+        }
+
+        function each(fn) {
+            for (var i = 0; i < names.length; i++) fn(names[i]);
+        }
+
+        function getStateCounts() {
+            var counts = {};
+            for (var i = 0; i < names.length; i++) {
+                var s = names[i].state;
+                if (!s) continue;
+                counts[s] = (counts[s] || 0) + 1;
+            }
+            return counts;
+        }
+
+        return {
+            setMemorials:    setMemorials,
+            setSection:      setSection,
+            setStateFilter:  setStateFilter,
+            setStateHover:   setStateHover,
+            resize:          resize,
+            update:          update,
+            render:          render,
+            pickAt:          pickAt,
+            onPointerMove:   onPointerMove,
+            clearHover:      clearHover,
+            each:            each,
+            getStateCounts:  getStateCounts,
+            getMemorials:    function () { return names; },
+            getDpr:          function () { return dpr; },
+            CATEGORY_LABELS: CATEGORY_LABELS
+        };
+    }
+
+    V.createVeilScene = createVeilScene;
+})();
+</script>
+<script>
+/* Memorial Wall — UI controls
+ * ------------------------------------------------------------------
+ * Section filter chips, state-hover tooltip, name-hover tooltip,
+ * full-tribute modal, ambient-sound toggle, cycling quote, and the
+ * accessible list-view fallback.
+ */
+(function () {
+    'use strict';
+
+    var V = window.VaelorinVeil = window.VaelorinVeil || {};
+
+    var QUOTES = [
+        'Those who are Loved will never be Forgotten',
+        'Their Threads do not end. They weave into the Pattern.',
+        'The Veil holds what love refuses to release.',
+        'Every name is a Thread. Every Thread is eternal.'
+    ];
+
+    var CATEGORY_LABELS = {
+        loved_one:      'Loved One',
+        child:          'Child',
+        companion:      'Companion',
+        service_member: 'Service Member'
+    };
+
+    function initUIControls(opts) {
+        var root            = opts.root;
+        var onSectionChange = opts.onSectionChange;
+        var onModalOpen     = opts.onModalOpen     || function () {};
+        var onModalClose    = opts.onModalClose    || function () {};
+
+        // ---- Section chips ----
+        var chips = root.querySelectorAll('.mw-chip');
+        chips.forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                chips.forEach(function (c) { c.classList.remove('is-active'); });
+                chip.classList.add('is-active');
+                var section = chip.getAttribute('data-section') || 'all';
+                root.setAttribute('data-section', section);
+                onSectionChange(section);
+            });
+        });
+
+        // ---- Name tooltip ----
+        var nameTooltipEl = root.querySelector('#mw-name-tooltip');
+        function showNameTooltip(memorial, x, y) {
+            if (!memorial) { hideNameTooltip(); return; }
+            nameTooltipEl.querySelector('[data-name]').textContent = memorial.name;
+            nameTooltipEl.querySelector('[data-category]').textContent =
+                CATEGORY_LABELS[memorial.category] || '';
+            nameTooltipEl.querySelector('[data-state]').textContent = memorial.state || '';
+            nameTooltipEl.querySelector('[data-tribute]').textContent = memorial.tribute || '';
+
+            // Position with edge clamping
+            var rect = nameTooltipEl.getBoundingClientRect();
+            var w = rect.width || 240, h = rect.height || 80;
+            var px = x + 16, py = y + 16;
+            var vw = window.innerWidth, vh = window.innerHeight;
+            if (px + w > vw - 12) px = x - w - 16;
+            if (py + h > vh - 12) py = y - h - 16;
+            nameTooltipEl.style.left = Math.max(8, px) + 'px';
+            nameTooltipEl.style.top  = Math.max(8, py) + 'px';
+            nameTooltipEl.classList.add('is-visible');
+            nameTooltipEl.setAttribute('aria-hidden', 'false');
+        }
+        function hideNameTooltip() {
+            nameTooltipEl.classList.remove('is-visible');
+            nameTooltipEl.setAttribute('aria-hidden', 'true');
+        }
+
+        // ---- State tooltip ----
+        var stateTooltipEl = root.querySelector('#mw-map-tooltip');
+        function showStateTooltip(abbr, name, count, event) {
+            if (!abbr) { hideStateTooltip(); return; }
+            var noun = count === 1 ? 'Thread' : 'Threads';
+            stateTooltipEl.innerHTML = '<strong>' + count + ' ' + noun +
+                '</strong> remembered from ' + name;
+            var x = event.clientX, y = event.clientY;
+            var rect = stateTooltipEl.getBoundingClientRect();
+            var w = rect.width || 220, h = rect.height || 40;
+            var vw = window.innerWidth;
+            var px = x + 14, py = y - h - 14;
+            if (px + w > vw - 12) px = x - w - 14;
+            if (py < 8) py = y + 14;
+            stateTooltipEl.style.left = px + 'px';
+            stateTooltipEl.style.top  = py + 'px';
+            stateTooltipEl.classList.add('is-visible');
+            stateTooltipEl.setAttribute('aria-hidden', 'false');
+        }
+        function hideStateTooltip() {
+            stateTooltipEl.classList.remove('is-visible');
+            stateTooltipEl.setAttribute('aria-hidden', 'true');
+        }
+
+        // ---- Modal ----
+        var modal = root.querySelector('#mw-modal');
+        var lastFocused = null;
+        function openModal(memorial) {
+            if (!memorial) return;
+            modal.querySelector('[data-name]').textContent     = memorial.name;
+            modal.querySelector('[data-category]').textContent = CATEGORY_LABELS[memorial.category] || '';
+            modal.querySelector('[data-state]').textContent    = stateName(memorial.state);
+            modal.querySelector('[data-tribute]').textContent  = memorial.tribute || '';
+            var submitted = '';
+            if (memorial.dateSubmitted) {
+                submitted = 'Submitted ' + memorial.dateSubmitted;
+                if (memorial.submittedBy && memorial.submittedBy !== 'Anonymous') {
+                    submitted += ' by ' + memorial.submittedBy;
+                }
+            }
+            modal.querySelector('[data-submitted]').textContent = submitted;
+
+            lastFocused = document.activeElement;
+            modal.hidden = false;
+            modal.querySelector('.mw-modal__card').focus();
+            document.addEventListener('keydown', onModalKey);
+            onModalOpen(memorial);
+        }
+        function closeModal() {
+            modal.hidden = true;
+            document.removeEventListener('keydown', onModalKey);
+            if (lastFocused && lastFocused.focus) lastFocused.focus();
+            onModalClose();
+        }
+        function onModalKey(e) {
+            if (e.key === 'Escape') closeModal();
+        }
+        modal.querySelectorAll('[data-close-modal]').forEach(function (el) {
+            el.addEventListener('click', closeModal);
+        });
+
+        // ---- Sound toggle ----
+        var soundBtn = root.querySelector('.mw-sound-toggle');
+        var audioCtx = null;
+        var audioNodes = null;
+        soundBtn.addEventListener('click', function () {
+            var pressed = soundBtn.getAttribute('aria-pressed') === 'true';
+            soundBtn.setAttribute('aria-pressed', pressed ? 'false' : 'true');
+            if (pressed) {
+                stopAmbient();
+            } else {
+                startAmbient();
+            }
+        });
+        function startAmbient() {
+            try {
+                var Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return;
+                audioCtx = audioCtx || new Ctx();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                // Two soft drone tones + a slowly modulating noise (wind).
+                var master = audioCtx.createGain();
+                master.gain.value = 0.0;
+                master.connect(audioCtx.destination);
+                master.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 1.5);
+
+                var osc1 = audioCtx.createOscillator();
+                osc1.type = 'sine';   osc1.frequency.value = 110;
+                var osc2 = audioCtx.createOscillator();
+                osc2.type = 'sine';   osc2.frequency.value = 165;
+                var lfo  = audioCtx.createOscillator();
+                lfo.type = 'sine';    lfo.frequency.value = 0.07;
+                var lfoGain = audioCtx.createGain(); lfoGain.gain.value = 8;
+                lfo.connect(lfoGain); lfoGain.connect(osc1.frequency);
+
+                osc1.connect(master); osc2.connect(master);
+                osc1.start(); osc2.start(); lfo.start();
+
+                audioNodes = { master: master, osc1: osc1, osc2: osc2, lfo: lfo };
+            } catch (e) {
+                console.warn('[Veil] Audio init failed', e);
+            }
+        }
+        function stopAmbient() {
+            if (!audioCtx || !audioNodes) return;
+            try {
+                audioNodes.master.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime + 1.0);
+                setTimeout(function () {
+                    try {
+                        audioNodes.osc1.stop(); audioNodes.osc2.stop(); audioNodes.lfo.stop();
+                    } catch (_) {}
+                    audioNodes = null;
+                }, 1100);
+            } catch (e) { /* no-op */ }
+        }
+
+        // ---- Cycling quote ----
+        var quoteEl = root.querySelector('[data-quote-target]');
+        var quoteIdx = 0;
+        function cycleQuote() {
+            quoteEl.textContent = QUOTES[quoteIdx];
+            quoteIdx = (quoteIdx + 1) % QUOTES.length;
+            // Fade in then out.
+            var parent = quoteEl.parentElement;
+            if (window.gsap) {
+                window.gsap.fromTo(parent,
+                    { opacity: 0 },
+                    { opacity: 1, duration: 2, ease: 'power2.out',
+                      onComplete: function () {
+                          window.gsap.to(parent, { opacity: 0, duration: 2, delay: 5, ease: 'power2.in' });
+                      }
+                    });
+            } else {
+                parent.style.transition = 'opacity 2s';
+                parent.style.opacity = '1';
+                setTimeout(function () { parent.style.opacity = '0'; }, 7000);
+            }
+        }
+        // First quote shortly after entry, then cycle every ~16s.
+        setTimeout(cycleQuote, 3500);
+        setInterval(cycleQuote, 16000);
+
+        // ---- Helpers ----
+        function stateName(abbr) {
+            // Defer to map module if it's already initialized.
+            if (V.map && typeof V.map.getStateName === 'function') {
+                return V.map.getStateName(abbr);
+            }
+            return abbr || '';
+        }
+
+        // ---- Accessible list view ----
+        function renderList(memorials) {
+            var target = root.querySelector('[data-list-target]');
+            if (!target) return;
+            var bySection = { loved_one: [], child: [], companion: [], service_member: [] };
+            memorials.forEach(function (m) {
+                (bySection[m.category] || bySection.loved_one).push(m);
+            });
+            var html = '';
+            ['loved_one', 'child', 'companion', 'service_member'].forEach(function (cat) {
+                var label = CATEGORY_LABELS[cat];
+                html += '<section class="mw-list-section">';
+                html += '<h3 class="mw-list-section__title">' + label + 's</h3>';
+                html += '<ul class="mw-list-section__names">';
+                bySection[cat].forEach(function (m) {
+                    html += '<li>' + escape(m.name) +
+                        ' <span class="mw-list-state">' + escape(m.state) + '</span>';
+                    if (m.tribute) html += '<span class="mw-list-tribute">' + escape(m.tribute) + '</span>';
+                    html += '</li>';
+                });
+                html += '</ul></section>';
+            });
+            target.innerHTML = html;
+        }
+
+        function escape(str) {
+            return String(str || '').replace(/[&<>"']/g, function (c) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+            });
+        }
+
+        return {
+            showNameTooltip:  showNameTooltip,
+            hideNameTooltip:  hideNameTooltip,
+            showStateTooltip: showStateTooltip,
+            hideStateTooltip: hideStateTooltip,
+            openModal:        openModal,
+            closeModal:       closeModal,
+            renderList:       renderList
+        };
+    }
+
+    V.initUIControls = initUIControls;
+})();
+</script>
+<script>
+/* Memorial Wall — Main orchestrator
+ * ------------------------------------------------------------------
+ * Wires together: data load → map render → veil scene → UI controls →
+ * single requestAnimationFrame loop that paints particles, threads,
+ * and names onto the same canvas. The map lives in a separate SVG.
+ *
+ * Coordinate model:
+ *   - Veil canvas uses CSS pixels (logical) inside its own bounding rect.
+ *   - Map anchors are stored in *page* coords; we translate them into
+ *     veil-canvas coords each frame so threads can extend outside the
+ *     veil's own rect into the map below.
+ *
+ * Performance notes:
+ *   - Single canvas, single rAF loop.
+ *   - Particles + names + threads share the same paint pass.
+ *   - Threads only drawn for non-dimmed names (keeps frame budget low
+ *     when filtering).
+ *   - Reduced motion: no drift, no particles, no pulses.
+ */
+(function () {
+    'use strict';
+
+    var V = window.VaelorinVeil = window.VaelorinVeil || {};
+
+    document.addEventListener('DOMContentLoaded', boot);
+
+    function boot() {
+        var root         = document.getElementById('memorial-wall');
+        if (!root) return;
+
+        var veilSection  = root.querySelector('.mw-veil');
+        var canvas       = root.querySelector('#mw-veil-canvas');
+        var ctx          = canvas.getContext('2d');
+        var mapSvg       = root.querySelector('#mw-map-svg');
+
+        var prefersReduced = window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) root.classList.add('mw-reduced-motion');
+
+        var config       = window.VaelorinVeilConfig || {};
+
+        // 1. Veil scene
+        var scene = V.createVeilScene({
+            canvas: canvas,
+            reducedMotion: prefersReduced
+        });
+
+        // 2. Particle system (skipped under reduced motion)
+        var particles = prefersReduced ? null : V.createParticleSystem({
+            dustCount:  isMobile() ? 36 : 80,
+            emberCount: isMobile() ? 5  : 12
+        });
+
+        // 3. Map
+        var map = V.createUSMap({
+            svg:     mapSvg,
+            dataUrl: config.usMapUrl,
+            onHover: function (abbr, name, count, event) {
+                if (!abbr) {
+                    ui.hideStateTooltip();
+                    scene.setStateHover(null);
+                    return;
+                }
+                ui.showStateTooltip(abbr, name, count, event);
+                scene.setStateHover(abbr);
+            },
+            onSelect: function (abbr) {
+                scene.setStateFilter(abbr);
+            }
+        });
+        V.map = map; // expose for ui-controls.stateName()
+
+        // 4. UI controls
+        var ui = V.initUIControls({
+            root: root,
+            onSectionChange: function (section) {
+                scene.setSection(section);
+            }
+        });
+
+        // ---- Pointer interaction on the veil canvas ----
+        canvas.addEventListener('mousemove', function (e) {
+            var rect = canvas.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var y = e.clientY - rect.top;
+            var hit = scene.onPointerMove(x, y);
+            if (hit) {
+                canvas.style.cursor = 'pointer';
+                ui.showNameTooltip(hit, e.clientX, e.clientY);
+            } else {
+                canvas.style.cursor = 'default';
+                ui.hideNameTooltip();
+            }
+        });
+        canvas.addEventListener('mouseleave', function () {
+            scene.clearHover();
+            ui.hideNameTooltip();
+            canvas.style.cursor = 'default';
+        });
+        canvas.addEventListener('click', function (e) {
+            var rect = canvas.getBoundingClientRect();
+            var hit = scene.pickAt(e.clientX - rect.left, e.clientY - rect.top);
+            if (hit) ui.openModal(hit);
+        });
+
+        canvas.addEventListener('touchstart', function (e) {
+            if (e.touches.length !== 1) return;
+            var t = e.touches[0];
+            var rect = canvas.getBoundingClientRect();
+            var hit = scene.pickAt(t.clientX - rect.left, t.clientY - rect.top);
+            if (hit) {
+                e.preventDefault();
+                ui.openModal(hit);
+            }
+        }, { passive: false });
+
+        canvas.setAttribute('tabindex', '0');
+        canvas.setAttribute('role', 'application');
+        canvas.setAttribute('aria-label', 'The Veil — interactive memorial sky');
+
+        window.addEventListener('resize', debounce(handleResize, 150));
+        window.addEventListener('scroll', function () {
+            map.recomputeAnchors && map.recomputeAnchors();
+        }, { passive: true });
+
+        // 5. Load data, then bring the wall up.
+        V.fetchMemorials().then(function (memorials) {
+            scene.setMemorials(memorials);
+            ui.renderList(memorials);
+
+            return map.load().then(function () {
+                map.init();
+                handleResize();
+                map.setCounts(scene.getStateCounts());
+                start();
+                requestAnimationFrame(function () {
+                    root.classList.add('is-ready');
+                });
+            });
+        }).catch(function (err) {
+            console.error('[Veil] Boot failed', err);
+            root.classList.add('is-ready');
+        });
+
+        function handleResize() {
+            var vr = veilSection.getBoundingClientRect();
+            scene.resize(vr.width, vr.height);
+            map.resize();
+            if (particles) particles.init(vr.width, vr.height);
+        }
+
+        // ---- The single render loop ----
+        function frame(now) {
+            if (document.hidden) {
+                requestAnimationFrame(frame);
+                return;
+            }
+
+            var vr   = veilSection.getBoundingClientRect();
+            var w    = vr.width;
+            var h    = vr.height;
+            var dpr  = scene.getDpr();
+
+            // Establish a single transform for the whole frame: scale by
+            // DPR so we can author all draws in CSS pixel units.
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+
+            // 1. Particles (background dust + embers rising)
+            if (particles) {
+                particles.update(w, h);
+                particles.render(ctx, w, h);
+            }
+
+            // 2. Update name positions BEFORE drawing threads so threads
+            //    aim at the correct point this frame (not last frame's).
+            scene.update(now);
+
+            // 3. Threads — from each visible name down to its state anchor.
+            //    Map anchors are in page coords; translate into canvas-local.
+            var canvasRect = canvas.getBoundingClientRect();
+            scene.each(function (n) {
+                if (!n.state || n.dimmed) return;
+                var anchor = map.getAnchor(n.state);
+                if (!anchor) return;
+                V.threadLines.draw(ctx, n, {
+                    x: anchor.px - canvasRect.left,
+                    y: anchor.py - canvasRect.top
+                }, null, now);
+            });
+
+            // 4. Names — drawn on top
+            scene.render(ctx, now);
+
+            requestAnimationFrame(frame);
+        }
+
+        function start() {
+            requestAnimationFrame(frame);
+        }
+
+        function isMobile() {
+            return window.innerWidth < 768;
+        }
+
+        function debounce(fn, ms) {
+            var t;
+            return function () {
+                clearTimeout(t);
+                var args = arguments, ctx = this;
+                t = setTimeout(function () { fn.apply(ctx, args); }, ms);
+            };
+        }
+    }
+})();
+</script>
+</body>
+</html>
