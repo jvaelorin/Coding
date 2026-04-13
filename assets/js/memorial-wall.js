@@ -172,11 +172,14 @@
                 particles.render(ctx, w, h);
             }
 
-            // 2. Update name positions BEFORE drawing threads so threads
-            //    aim at the correct point this frame (not last frame's).
+            // 2. Update name positions BEFORE drawing any threads so the
+            //    weave + down-threads aim at this frame's positions.
             scene.update(now);
 
-            // 3. Threads — from each visible name down to its state anchor.
+            // 3. The Pattern — name-to-name weave (sits behind everything).
+            V.threadLines.drawWeave(ctx, scene.getMemorials(), scene.getEdges(), now);
+
+            // 4. Down-threads — from each visible name to its state anchor.
             //    Map anchors are in page coords; translate into canvas-local.
             var canvasRect = canvas.getBoundingClientRect();
             scene.each(function (n) {
@@ -189,7 +192,7 @@
                 }, null, now);
             });
 
-            // 4. Names — drawn on top
+            // 5. Names — drawn on top of all threads
             scene.render(ctx, now);
 
             requestAnimationFrame(frame);

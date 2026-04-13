@@ -45,6 +45,7 @@
         var width  = 0;
         var height = 0;
         var names  = [];
+        var edges  = [];     // [{a, b, section}] — the Pattern: name-to-name weave
         var section = 'all';
         var stateFilter = null;
         var hoveredId = null;
@@ -106,6 +107,53 @@
                     var base = key === 'child' ? 15 : 14;
                     n.fontSize = Math.round(base + n.depth * 6);
                 });
+            });
+
+            // After positions are set, compute the weave — each name's
+            // K nearest neighbors within its own section. This is the
+            // Pattern: every name held by the threads of the others.
+            computeEdges();
+        }
+
+        // K-nearest-neighbor edge graph per section. Edges are deduped
+        // (a→b and b→a collapse to one) and stored as index pairs into
+        // the names array; rendering uses live x/y so the weave breathes
+        // with the names' drift.
+        function computeEdges() {
+            edges = [];
+            var K = 3;            // neighbors per name
+            var bySection = {};
+            for (var i = 0; i < names.length; i++) {
+                var c = names[i].category;
+                (bySection[c] = bySection[c] || []).push(i);
+            }
+            var seen = {};
+            Object.keys(bySection).forEach(function (sectionKey) {
+                var idxs = bySection[sectionKey];
+                if (idxs.length < 2) return;
+                var localK = Math.min(K, idxs.length - 1);
+                for (var i = 0; i < idxs.length; i++) {
+                    var ai = idxs[i];
+                    var ax = names[ai].baseX;
+                    var ay = names[ai].baseY;
+                    var dists = [];
+                    for (var j = 0; j < idxs.length; j++) {
+                        if (j === i) continue;
+                        var bi = idxs[j];
+                        var dx = names[bi].baseX - ax;
+                        var dy = names[bi].baseY - ay;
+                        dists.push({ idx: bi, d: dx * dx + dy * dy });
+                    }
+                    dists.sort(function (p, q) { return p.d - q.d; });
+                    for (var k = 0; k < localK; k++) {
+                        var bi2 = dists[k].idx;
+                        var lo = Math.min(ai, bi2), hi = Math.max(ai, bi2);
+                        var key2 = lo + ':' + hi;
+                        if (seen[key2]) continue;
+                        seen[key2] = true;
+                        edges.push({ a: lo, b: hi, section: sectionKey });
+                    }
+                }
             });
         }
 
@@ -302,6 +350,7 @@
             each:            each,
             getStateCounts:  getStateCounts,
             getMemorials:    function () { return names; },
+            getEdges:        function () { return edges; },
             getDpr:          function () { return dpr; },
             CATEGORY_LABELS: CATEGORY_LABELS
         };

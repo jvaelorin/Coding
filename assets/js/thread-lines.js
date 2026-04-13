@@ -86,7 +86,75 @@
         };
     }
 
+    // ------------------------------------------------------------------
+    // The Pattern — name-to-name weave
+    // ------------------------------------------------------------------
+    // Each name is connected to its 2-3 nearest neighbors within the
+    // same section by a faint thread. Together these threads form a
+    // tapestry: every name is held by the others, no one floats alone.
+    // Hovering a name brightens the threads it touches so you can see
+    // its place in the Pattern.
+
+    var SECTION_WEAVE_RGB = {
+        loved_one:      '212, 163, 55',   // gold
+        child:          '220, 220, 232',  // soft silver
+        companion:      '201, 162, 39',   // amber
+        service_member: '120, 150, 200'   // steel blue
+    };
+
+    function drawWeave(ctx, names, edges, now) {
+        if (!edges || !edges.length) return;
+
+        // A slow collective "breath" — the entire weave shimmers as one.
+        var breath = 0.65 + 0.35 * Math.sin(now * 0.0007);
+
+        for (var i = 0; i < edges.length; i++) {
+            var e = edges[i];
+            var a = names[e.a];
+            var b = names[e.b];
+            if (!a || !b) continue;
+
+            // If both endpoints are dimmed (filtered out), hide the thread.
+            if (a.dimmed && b.dimmed) continue;
+
+            var hovered     = a.hovered || b.hovered;
+            var bothActive  = !a.dimmed && !b.dimmed;
+            var rgb         = SECTION_WEAVE_RGB[e.section] || SECTION_WEAVE_RGB.loved_one;
+
+            var alpha;
+            if (hovered)         alpha = 0.55;
+            else if (bothActive) alpha = 0.09 * breath;
+            else                 alpha = 0.025;
+
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineWidth = hovered ? 0.9 : 0.45;
+            ctx.strokeStyle = 'rgba(' + rgb + ', ' + alpha + ')';
+            if (hovered) {
+                ctx.shadowColor = 'rgba(' + rgb + ', ' + (alpha * 0.6) + ')';
+                ctx.shadowBlur  = 6;
+            }
+
+            // Slight perpendicular curve so the weave feels organic,
+            // not like a wireframe. Curvature is small and consistent
+            // (~6% of segment length) so the lines read as fabric.
+            var dx = b.x - a.x;
+            var dy = b.y - a.y;
+            var midX = (a.x + b.x) / 2;
+            var midY = (a.y + b.y) / 2;
+            var cx = midX + (-dy * 0.06);
+            var cy = midY + ( dx * 0.06);
+
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.quadraticCurveTo(cx, cy, b.x, b.y);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
     V.threadLines = {
-        draw: drawThread
+        draw:      drawThread,
+        drawWeave: drawWeave
     };
 })();

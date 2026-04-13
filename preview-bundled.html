@@ -1055,8 +1055,76 @@ window.VaelorinVeilConfig = { firebase: {}, usMapUrl: 'https://cdn.jsdelivr.net/
         };
     }
 
+    // ------------------------------------------------------------------
+    // The Pattern — name-to-name weave
+    // ------------------------------------------------------------------
+    // Each name is connected to its 2-3 nearest neighbors within the
+    // same section by a faint thread. Together these threads form a
+    // tapestry: every name is held by the others, no one floats alone.
+    // Hovering a name brightens the threads it touches so you can see
+    // its place in the Pattern.
+
+    var SECTION_WEAVE_RGB = {
+        loved_one:      '212, 163, 55',   // gold
+        child:          '220, 220, 232',  // soft silver
+        companion:      '201, 162, 39',   // amber
+        service_member: '120, 150, 200'   // steel blue
+    };
+
+    function drawWeave(ctx, names, edges, now) {
+        if (!edges || !edges.length) return;
+
+        // A slow collective "breath" — the entire weave shimmers as one.
+        var breath = 0.65 + 0.35 * Math.sin(now * 0.0007);
+
+        for (var i = 0; i < edges.length; i++) {
+            var e = edges[i];
+            var a = names[e.a];
+            var b = names[e.b];
+            if (!a || !b) continue;
+
+            // If both endpoints are dimmed (filtered out), hide the thread.
+            if (a.dimmed && b.dimmed) continue;
+
+            var hovered     = a.hovered || b.hovered;
+            var bothActive  = !a.dimmed && !b.dimmed;
+            var rgb         = SECTION_WEAVE_RGB[e.section] || SECTION_WEAVE_RGB.loved_one;
+
+            var alpha;
+            if (hovered)         alpha = 0.55;
+            else if (bothActive) alpha = 0.09 * breath;
+            else                 alpha = 0.025;
+
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineWidth = hovered ? 0.9 : 0.45;
+            ctx.strokeStyle = 'rgba(' + rgb + ', ' + alpha + ')';
+            if (hovered) {
+                ctx.shadowColor = 'rgba(' + rgb + ', ' + (alpha * 0.6) + ')';
+                ctx.shadowBlur  = 6;
+            }
+
+            // Slight perpendicular curve so the weave feels organic,
+            // not like a wireframe. Curvature is small and consistent
+            // (~6% of segment length) so the lines read as fabric.
+            var dx = b.x - a.x;
+            var dy = b.y - a.y;
+            var midX = (a.x + b.x) / 2;
+            var midY = (a.y + b.y) / 2;
+            var cx = midX + (-dy * 0.06);
+            var cy = midY + ( dx * 0.06);
+
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.quadraticCurveTo(cx, cy, b.x, b.y);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
     V.threadLines = {
-        draw: drawThread
+        draw:      drawThread,
+        drawWeave: drawWeave
     };
 })();
 </script>
@@ -1321,6 +1389,7 @@ window.VaelorinVeilConfig = { firebase: {}, usMapUrl: 'https://cdn.jsdelivr.net/
         var width  = 0;
         var height = 0;
         var names  = [];
+        var edges  = [];     // [{a, b, section}] — the Pattern: name-to-name weave
         var section = 'all';
         var stateFilter = null;
         var hoveredId = null;
@@ -1382,6 +1451,53 @@ window.VaelorinVeilConfig = { firebase: {}, usMapUrl: 'https://cdn.jsdelivr.net/
                     var base = key === 'child' ? 15 : 14;
                     n.fontSize = Math.round(base + n.depth * 6);
                 });
+            });
+
+            // After positions are set, compute the weave — each name's
+            // K nearest neighbors within its own section. This is the
+            // Pattern: every name held by the threads of the others.
+            computeEdges();
+        }
+
+        // K-nearest-neighbor edge graph per section. Edges are deduped
+        // (a→b and b→a collapse to one) and stored as index pairs into
+        // the names array; rendering uses live x/y so the weave breathes
+        // with the names' drift.
+        function computeEdges() {
+            edges = [];
+            var K = 3;            // neighbors per name
+            var bySection = {};
+            for (var i = 0; i < names.length; i++) {
+                var c = names[i].category;
+                (bySection[c] = bySection[c] || []).push(i);
+            }
+            var seen = {};
+            Object.keys(bySection).forEach(function (sectionKey) {
+                var idxs = bySection[sectionKey];
+                if (idxs.length < 2) return;
+                var localK = Math.min(K, idxs.length - 1);
+                for (var i = 0; i < idxs.length; i++) {
+                    var ai = idxs[i];
+                    var ax = names[ai].baseX;
+                    var ay = names[ai].baseY;
+                    var dists = [];
+                    for (var j = 0; j < idxs.length; j++) {
+                        if (j === i) continue;
+                        var bi = idxs[j];
+                        var dx = names[bi].baseX - ax;
+                        var dy = names[bi].baseY - ay;
+                        dists.push({ idx: bi, d: dx * dx + dy * dy });
+                    }
+                    dists.sort(function (p, q) { return p.d - q.d; });
+                    for (var k = 0; k < localK; k++) {
+                        var bi2 = dists[k].idx;
+                        var lo = Math.min(ai, bi2), hi = Math.max(ai, bi2);
+                        var key2 = lo + ':' + hi;
+                        if (seen[key2]) continue;
+                        seen[key2] = true;
+                        edges.push({ a: lo, b: hi, section: sectionKey });
+                    }
+                }
             });
         }
 
@@ -1578,6 +1694,7 @@ window.VaelorinVeilConfig = { firebase: {}, usMapUrl: 'https://cdn.jsdelivr.net/
             each:            each,
             getStateCounts:  getStateCounts,
             getMemorials:    function () { return names; },
+            getEdges:        function () { return edges; },
             getDpr:          function () { return dpr; },
             CATEGORY_LABELS: CATEGORY_LABELS
         };
@@ -2029,11 +2146,14 @@ window.VaelorinVeilConfig = { firebase: {}, usMapUrl: 'https://cdn.jsdelivr.net/
                 particles.render(ctx, w, h);
             }
 
-            // 2. Update name positions BEFORE drawing threads so threads
-            //    aim at the correct point this frame (not last frame's).
+            // 2. Update name positions BEFORE drawing any threads so the
+            //    weave + down-threads aim at this frame's positions.
             scene.update(now);
 
-            // 3. Threads — from each visible name down to its state anchor.
+            // 3. The Pattern — name-to-name weave (sits behind everything).
+            V.threadLines.drawWeave(ctx, scene.getMemorials(), scene.getEdges(), now);
+
+            // 4. Down-threads — from each visible name to its state anchor.
             //    Map anchors are in page coords; translate into canvas-local.
             var canvasRect = canvas.getBoundingClientRect();
             scene.each(function (n) {
@@ -2046,7 +2166,7 @@ window.VaelorinVeilConfig = { firebase: {}, usMapUrl: 'https://cdn.jsdelivr.net/
                 }, null, now);
             });
 
-            // 4. Names — drawn on top
+            // 5. Names — drawn on top of all threads
             scene.render(ctx, now);
 
             requestAnimationFrame(frame);
