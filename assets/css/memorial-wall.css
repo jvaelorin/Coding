@@ -1,0 +1,632 @@
+/* ==========================================================================
+   Memorial Wall — The Veil
+   VaelorinVerse
+   ========================================================================== */
+
+:root {
+    --mw-void-top: #0a0a0a;
+    --mw-void-bottom: #0d1117;
+    --mw-thread: #D4A337;
+    --mw-thread-bright: #FFD700;
+    --mw-name: #F5E6D3;
+    --mw-map-bg: #1a1a1a;
+    --mw-map-border: #3d3522;
+    --mw-map-border-bright: #7a6a3f;
+    --mw-loved: #D4A337;
+    --mw-child: #E8E8E8;
+    --mw-companion: #C9A227;
+    --mw-service: #1E3A5F;
+    --mw-service-edge: #D4A337;
+    --mw-font-display: "Cinzel", "Cormorant Garamond", Georgia, serif;
+    --mw-font-name: "Cormorant Garamond", Georgia, serif;
+    --mw-font-ui: "Inter", system-ui, sans-serif;
+    --mw-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* --------------------------------------------------------------------------
+   Layout — take over the viewport, hide page chrome overflow.
+   -------------------------------------------------------------------------- */
+
+.memorial-wall {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% 20%, #0d1117 0%, var(--mw-void-top) 60%, #050507 100%);
+    color: var(--mw-name);
+    font-family: var(--mw-font-ui);
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Entry veil fade */
+.mw-entry-veil {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 2s ease-out;
+}
+.memorial-wall.is-ready .mw-entry-veil {
+    opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   The Veil (upper 60-70%) — canvas region for floating names
+   -------------------------------------------------------------------------- */
+
+.mw-veil {
+    position: relative;
+    width: 100%;
+    height: 65vh;
+    min-height: 420px;
+}
+
+.mw-veil__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: default;
+}
+
+/* Faded section titles painted in the sky — canvas handles positioning */
+.mw-veil__section-labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.mw-veil__label {
+    position: absolute;
+    font-family: var(--mw-font-display);
+    font-weight: 400;
+    font-size: clamp(14px, 1.6vw, 22px);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(212, 163, 55, 0.18);
+    transition: color 0.8s var(--mw-ease), opacity 0.8s var(--mw-ease);
+    white-space: nowrap;
+}
+
+.mw-veil__label--children   { top: 8%;  left: 50%; transform: translateX(-50%); color: rgba(232, 232, 232, 0.18); }
+.mw-veil__label--loved      { top: 42%; left: 22%; transform: translate(-50%, -50%); color: rgba(212, 163, 55, 0.18); }
+.mw-veil__label--companions { top: 42%; right: 22%; transform: translate(50%, -50%); color: rgba(201, 162, 39, 0.18); }
+.mw-veil__label--service    { bottom: 8%; left: 50%; transform: translateX(-50%); color: rgba(30, 58, 95, 0.35); }
+
+.memorial-wall[data-section="loved_one"]      .mw-veil__label:not(.mw-veil__label--loved),
+.memorial-wall[data-section="child"]          .mw-veil__label:not(.mw-veil__label--children),
+.memorial-wall[data-section="companion"]      .mw-veil__label:not(.mw-veil__label--companions),
+.memorial-wall[data-section="service_member"] .mw-veil__label:not(.mw-veil__label--service) {
+    opacity: 0.2;
+}
+
+/* --------------------------------------------------------------------------
+   The Map (lower 30-40%)
+   -------------------------------------------------------------------------- */
+
+.mw-map {
+    position: relative;
+    width: 100%;
+    height: 35vh;
+    min-height: 260px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.45) 30%, #050507 100%);
+}
+
+.mw-map__svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+}
+
+.mw-state {
+    fill: var(--mw-map-bg);
+    stroke: var(--mw-map-border);
+    stroke-width: 0.6;
+    transition: fill 0.3s var(--mw-ease), stroke 0.3s var(--mw-ease);
+    cursor: pointer;
+}
+
+.mw-state:hover,
+.mw-state.is-hovered,
+.mw-state.is-selected {
+    fill: #1f1a10;
+    stroke: var(--mw-map-border-bright);
+    stroke-width: 0.9;
+}
+
+.mw-state-anchor {
+    fill: var(--mw-thread);
+    opacity: 0;
+    transition: opacity 0.4s var(--mw-ease);
+    pointer-events: none;
+}
+
+.mw-state-anchor.is-active {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+}
+
+/* --------------------------------------------------------------------------
+   Tooltips
+   -------------------------------------------------------------------------- */
+
+.mw-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(10, 10, 10, 0.92);
+    border: 1px solid rgba(212, 163, 55, 0.35);
+    border-radius: 4px;
+    padding: 12px 16px;
+    max-width: 280px;
+    font-family: var(--mw-font-ui);
+    font-size: 13px;
+    color: var(--mw-name);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s var(--mw-ease), transform 0.2s var(--mw-ease);
+    z-index: 40;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 163, 55, 0.12);
+}
+
+.mw-tooltip.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mw-tooltip__name {
+    font-family: var(--mw-font-name);
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 4px;
+    color: var(--mw-name);
+}
+
+.mw-tooltip__meta {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mw-thread);
+    margin: 0 0 6px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.mw-tooltip__dot { opacity: 0.5; }
+
+.mw-tooltip__tribute {
+    font-family: var(--mw-font-name);
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.4;
+    color: rgba(245, 230, 211, 0.85);
+    margin: 0;
+}
+
+.mw-tooltip__tribute:empty { display: none; }
+
+/* --------------------------------------------------------------------------
+   Section filter controls
+   -------------------------------------------------------------------------- */
+
+.mw-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    z-index: 30;
+    max-width: calc(100% - 40px);
+}
+
+.mw-chip {
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(212, 163, 55, 0.3);
+    color: rgba(245, 230, 211, 0.75);
+    padding: 8px 16px;
+    font-family: var(--mw-font-ui);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.3s var(--mw-ease);
+    backdrop-filter: blur(6px);
+}
+
+.mw-chip:hover,
+.mw-chip:focus-visible {
+    border-color: var(--mw-thread);
+    color: var(--mw-name);
+    outline: none;
+    box-shadow: 0 0 14px rgba(212, 163, 55, 0.25);
+}
+
+.mw-chip.is-active {
+    background: rgba(212, 163, 55, 0.15);
+    border-color: var(--mw-thread);
+    color: var(--mw-name);
+    box-shadow: 0 0 18px rgba(212, 163, 55, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   Ambient sound toggle
+   -------------------------------------------------------------------------- */
+
+.mw-sound-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(212, 163, 55, 0.3);
+    color: rgba(245, 230, 211, 0.75);
+    padding: 8px 14px;
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: all 0.3s var(--mw-ease);
+    z-index: 30;
+}
+
+.mw-sound-toggle:hover,
+.mw-sound-toggle:focus-visible {
+    border-color: var(--mw-thread);
+    color: var(--mw-name);
+    outline: none;
+}
+
+.mw-sound-toggle__icon {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(212, 163, 55, 0.4);
+    transition: background 0.3s var(--mw-ease), box-shadow 0.3s var(--mw-ease);
+}
+
+.mw-sound-toggle[aria-pressed="true"] .mw-sound-toggle__icon {
+    background: var(--mw-thread-bright);
+    box-shadow: 0 0 10px var(--mw-thread-bright);
+}
+
+/* --------------------------------------------------------------------------
+   CTA — Remember a Name
+   -------------------------------------------------------------------------- */
+
+.mw-cta {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: inline-block;
+    padding: 14px 28px;
+    border: 1px solid var(--mw-thread);
+    background: rgba(10, 10, 10, 0.5);
+    color: var(--mw-thread);
+    font-family: var(--mw-font-display);
+    font-size: 13px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 2px;
+    backdrop-filter: blur(6px);
+    transition: all 0.4s var(--mw-ease);
+    z-index: 30;
+    animation: mw-cta-idle 4s ease-in-out infinite;
+}
+
+@keyframes mw-cta-idle {
+    0%, 100% { box-shadow: 0 0 0 rgba(212, 163, 55, 0); }
+    50%      { box-shadow: 0 0 22px rgba(212, 163, 55, 0.35); }
+}
+
+.mw-cta:hover,
+.mw-cta:focus-visible {
+    background: rgba(212, 163, 55, 0.18);
+    color: var(--mw-name);
+    box-shadow: 0 0 30px rgba(212, 163, 55, 0.6);
+    outline: none;
+    animation-play-state: paused;
+}
+
+/* --------------------------------------------------------------------------
+   Quote overlay
+   -------------------------------------------------------------------------- */
+
+.mw-quote {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 5;
+    max-width: min(640px, 80vw);
+    text-align: center;
+    opacity: 0;
+}
+
+.mw-quote__text {
+    font-family: var(--mw-font-name);
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(16px, 2.2vw, 24px);
+    color: rgba(245, 230, 211, 0.55);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    margin: 0;
+    text-shadow: 0 0 24px rgba(212, 163, 55, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   Modal (full tribute)
+   -------------------------------------------------------------------------- */
+
+.mw-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.mw-modal[hidden] { display: none; }
+
+.mw-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    animation: mw-fade-in 0.3s var(--mw-ease);
+}
+
+.mw-modal__card {
+    position: relative;
+    max-width: 520px;
+    width: 100%;
+    padding: 40px 40px 36px;
+    background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
+    border: 1px solid rgba(212, 163, 55, 0.4);
+    border-radius: 4px;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8), 0 0 60px rgba(212, 163, 55, 0.15);
+    animation: mw-slide-up 0.4s var(--mw-ease);
+    outline: none;
+}
+
+.mw-modal__close {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    color: rgba(245, 230, 211, 0.6);
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 10px;
+    transition: color 0.2s var(--mw-ease);
+}
+.mw-modal__close:hover { color: var(--mw-thread-bright); }
+
+.mw-modal__category {
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--mw-thread);
+    margin: 0 0 12px;
+}
+
+.mw-modal__name {
+    font-family: var(--mw-font-name);
+    font-weight: 500;
+    font-size: clamp(24px, 3vw, 32px);
+    color: var(--mw-name);
+    margin: 0 0 8px;
+    letter-spacing: 0.01em;
+}
+
+.mw-modal__state {
+    font-family: var(--mw-font-ui);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245, 230, 211, 0.55);
+    margin: 0 0 24px;
+}
+
+.mw-modal__tribute {
+    font-family: var(--mw-font-name);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.6;
+    color: rgba(245, 230, 211, 0.9);
+    margin: 0 0 20px;
+    padding-left: 16px;
+    border-left: 2px solid rgba(212, 163, 55, 0.4);
+}
+.mw-modal__tribute:empty { display: none; }
+
+.mw-modal__submitted {
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    color: rgba(245, 230, 211, 0.4);
+    margin: 0;
+}
+
+@keyframes mw-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes mw-slide-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   List fallback — only visible to screen readers by default, or revealed
+   when prefers-reduced-motion is active with reduced-motion styling.
+   -------------------------------------------------------------------------- */
+
+.mw-list-fallback {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.mw-list-fallback__title {
+    font-family: var(--mw-font-display);
+    font-size: 24px;
+}
+
+.mw-list-section {
+    margin: 24px 0;
+}
+
+.mw-list-section__title {
+    font-family: var(--mw-font-display);
+    font-size: 18px;
+    color: var(--mw-thread);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+}
+
+.mw-list-section__names {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mw-list-section__names li {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(212, 163, 55, 0.12);
+    font-family: var(--mw-font-name);
+    font-size: 16px;
+    color: var(--mw-name);
+}
+
+.mw-list-section__names li .mw-list-state {
+    font-family: var(--mw-font-ui);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(245, 230, 211, 0.5);
+    margin-left: 8px;
+}
+
+.mw-list-section__names li .mw-list-tribute {
+    display: block;
+    font-style: italic;
+    font-size: 14px;
+    color: rgba(245, 230, 211, 0.7);
+    margin-top: 2px;
+}
+
+.mw-noscript {
+    padding: 24px;
+    color: var(--mw-name);
+    text-align: center;
+    font-family: var(--mw-font-ui);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1199px) {
+    .mw-veil  { height: 70vh; }
+    .mw-map   { height: 30vh; min-height: 220px; }
+}
+
+@media (max-width: 767px) {
+    .mw-veil { height: 72vh; }
+    .mw-map  { height: 28vh; min-height: 180px; }
+
+    .mw-controls {
+        top: auto;
+        right: 0;
+        bottom: 88px;
+        left: 0;
+        padding: 0 16px;
+        max-width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .mw-controls::-webkit-scrollbar { display: none; }
+
+    .mw-chip {
+        flex-shrink: 0;
+        padding: 7px 14px;
+        font-size: 11px;
+    }
+
+    .mw-cta {
+        bottom: 16px;
+        right: 16px;
+        padding: 12px 20px;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+    }
+
+    .mw-sound-toggle {
+        top: 12px;
+        left: 12px;
+        padding: 6px 10px;
+        font-size: 10px;
+    }
+
+    .mw-veil__label { font-size: 11px; letter-spacing: 0.25em; }
+
+    .mw-modal__card { padding: 32px 24px 28px; }
+}
+
+/* High-contrast mode */
+@media (prefers-contrast: more) {
+    :root {
+        --mw-name: #ffffff;
+        --mw-thread: #ffd24d;
+        --mw-thread-bright: #fff08a;
+        --mw-map-border: #7a6a3f;
+    }
+    .mw-chip { border-color: var(--mw-thread); color: var(--mw-name); }
+}
+
+/* Reduced motion — disable drift & particles, reveal list fallback */
+@media (prefers-reduced-motion: reduce) {
+    .mw-entry-veil { transition: opacity 0.01ms; }
+    .mw-cta { animation: none; }
+    .mw-tooltip { transition: opacity 0.01ms; }
+}
+
+.mw-reduced-motion .mw-list-fallback {
+    position: relative;
+    left: auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    max-width: 900px;
+    margin: 24px auto;
+    padding: 0 24px 64px;
+}
