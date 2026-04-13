@@ -31,7 +31,13 @@
     position: relative;
     width: 100%;
     min-height: 100vh;
-    background: radial-gradient(ellipse at 50% 20%, #0d1117 0%, var(--mw-void-top) 60%, #050507 100%);
+    /* A living void — deep plum-black at the top (the heavens), warm
+       gold-brown near the horizon (where earth meets sky). Not
+       colorful, just alive. */
+    background:
+        radial-gradient(ellipse at 50% 95%, rgba(80, 45, 12, 0.22) 0%, rgba(0,0,0,0) 55%),
+        radial-gradient(ellipse at 50% 15%, rgba(32, 40, 72, 0.35) 0%, rgba(0,0,0,0) 55%),
+        radial-gradient(ellipse at 50% 50%, #0e0d14 0%, #080711 60%, #040306 100%);
     color: var(--mw-name);
     font-family: var(--mw-font-ui);
     overflow: hidden;

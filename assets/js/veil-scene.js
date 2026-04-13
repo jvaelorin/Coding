@@ -121,7 +121,7 @@
         // with the names' drift.
         function computeEdges() {
             edges = [];
-            var K = 3;            // neighbors per name
+            var K = 4;            // neighbors per name
             var bySection = {};
             for (var i = 0; i < names.length; i++) {
                 var c = names[i].category;
@@ -205,6 +205,14 @@
         }
 
         function update(now) {
+            // Collective sway — a single shared wind that every name
+            // responds to. This is what makes the sky breathe as ONE
+            // chorus instead of as a crowd of individuals.
+            var swayX = reducedMotion ? 0 : Math.cos(now * 0.00018) * 8 +
+                                            Math.cos(now * 0.00041) * 3;
+            var swayY = reducedMotion ? 0 : Math.sin(now * 0.00021) * 5 +
+                                            Math.sin(now * 0.00037) * 2;
+
             for (var i = 0; i < names.length; i++) {
                 var n = names[i];
                 if (reducedMotion) {
@@ -212,8 +220,14 @@
                     n.y = n.baseY;
                 } else {
                     var t = now * n.driftSpeed;
-                    n.x = n.baseX + Math.cos(t + n.driftPhaseX) * n.driftAmpX;
-                    n.y = n.baseY + Math.sin(t + n.driftPhaseY) * n.driftAmpY;
+                    // Individual drift (small) PLUS shared sway (larger).
+                    // Depth scales individual drift only — far names move
+                    // less, near names move more — but everyone shares
+                    // the same wind.
+                    n.x = n.baseX + swayX +
+                          Math.cos(t + n.driftPhaseX) * n.driftAmpX * 0.6;
+                    n.y = n.baseY + swayY +
+                          Math.sin(t + n.driftPhaseY) * n.driftAmpY * 0.6;
                 }
 
                 n.dimmed = isDimmed(n);

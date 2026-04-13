@@ -166,20 +166,25 @@
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             ctx.clearRect(0, 0, w, h);
 
-            // 1. Particles (background dust + embers rising)
-            if (particles) {
-                particles.update(w, h);
-                particles.render(ctx, w, h);
-            }
+            // Update background motion once per frame.
+            if (particles) particles.update(w, h);
 
-            // 2. Update name positions BEFORE drawing any threads so the
+            // 1. Nebula — deep glowing clouds. Gives the void mass.
+            //    Drawn first so everything else sits in front of it.
+            if (particles) particles.renderNebula(ctx, w, h);
+
+            // 2. Loom — long faint diagonal threads stretched across the
+            //    entire sky. The visible fabric of the Veil itself.
+            if (particles) particles.renderLoom(ctx, w, h);
+
+            // 3. Update name positions BEFORE drawing any threads so the
             //    weave + down-threads aim at this frame's positions.
             scene.update(now);
 
-            // 3. The Pattern — name-to-name weave (sits behind everything).
+            // 4. The Pattern — name-to-name weave (knots in the fabric).
             V.threadLines.drawWeave(ctx, scene.getMemorials(), scene.getEdges(), now);
 
-            // 4. Down-threads — from each visible name to its state anchor.
+            // 5. Down-threads — from each visible name to its state anchor.
             //    Map anchors are in page coords; translate into canvas-local.
             var canvasRect = canvas.getBoundingClientRect();
             scene.each(function (n) {
@@ -192,8 +197,12 @@
                 }, null, now);
             });
 
-            // 5. Names — drawn on top of all threads
+            // 6. Names — drawn on top of all threads
             scene.render(ctx, now);
+
+            // 7. Dust + embers — foreground sparkle; sits in front of names
+            //    so they shimmer past, the way real motes catch the light.
+            if (particles) particles.render(ctx, w, h);
 
             requestAnimationFrame(frame);
         }
